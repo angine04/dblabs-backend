@@ -10,6 +10,32 @@ grades_bp = Blueprint('grades', __name__, url_prefix='/api/grades')
 grade_schema = GradeSchema()
 grades_schema = GradeSchema(many=True)
 
+@grades_bp.route('/', methods=['GET'])
+def get_all_grades():
+    grades = Grade.query.all()
+    return jsonify([{
+        'id': grade.id,
+        'student_id': grade.student_id,
+        'course_id': grade.course_id,
+        'score': grade.score,
+        'semester': grade.course.semester if grade.course else None,
+        'submission_date': grade.submission_date.isoformat() if grade.submission_date else None,
+        'comments': grade.comments,
+        'student': {
+            'id': grade.student.id,
+            'student_id': grade.student.student_id,
+            'first_name': grade.student.first_name,
+            'last_name': grade.student.last_name,
+            'email': grade.student.email
+        } if grade.student else None,
+        'course': {
+            'id': grade.course.id,
+            'code': grade.course.code,
+            'name': grade.course.name,
+            'semester': grade.course.semester
+        } if grade.course else None
+    } for grade in grades])
+
 @grades_bp.route('/course/<int:course_id>', methods=['GET'])
 def get_course_grades(course_id):
     grades = Grade.query.filter_by(course_id=course_id).all()
@@ -23,15 +49,16 @@ def get_course_grades(course_id):
         'comments': grade.comments,
         'student': {
             'id': grade.student.id,
-            'studentId': grade.student.student_id,
-            'firstName': grade.student.first_name,
-            'lastName': grade.student.last_name,
+            'student_id': grade.student.student_id,
+            'first_name': grade.student.first_name,
+            'last_name': grade.student.last_name,
             'email': grade.student.email
         } if grade.student else None,
         'course': {
             'id': grade.course.id,
             'code': grade.course.code,
-            'name': grade.course.name
+            'name': grade.course.name,
+            'semester': grade.course.semester
         } if grade.course else None
     } for grade in grades])
 

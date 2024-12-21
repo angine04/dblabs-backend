@@ -9,6 +9,12 @@ course_bp = Blueprint('courses', __name__, url_prefix='/api/courses')
 course_schema = CourseSchema()
 courses_schema = CourseSchema(many=True)
 
+def parse_time(time_str):
+    try:
+        return datetime.strptime(time_str, '%H:%M:%S').time()
+    except ValueError:
+        return datetime.strptime(time_str, '%H:%M').time()
+
 @course_bp.route('/', methods=['GET'])
 def get_courses():
     courses = Course.query.all()
@@ -51,8 +57,8 @@ def create_course():
             try:
                 course_schedule = CourseSchedule(
                     day=schedule['day'],
-                    start_time=datetime.strptime(schedule['startTime'], '%H:%M').time(),
-                    end_time=datetime.strptime(schedule['endTime'], '%H:%M').time()
+                    start_time=parse_time(schedule['start_time']),
+                    end_time=parse_time(schedule['end_time'])
                 )
                 course.schedule.append(course_schedule)
             except Exception as e:
@@ -88,8 +94,8 @@ def update_course(id):
         for schedule in data['schedule']:
             course_schedule = CourseSchedule(
                 day=schedule['day'],
-                start_time=datetime.strptime(schedule['startTime'], '%H:%M').time(),
-                end_time=datetime.strptime(schedule['endTime'], '%H:%M').time()
+                start_time=parse_time(schedule['start_time']),
+                end_time=parse_time(schedule['end_time'])
             )
             course.schedule.append(course_schedule)
     
