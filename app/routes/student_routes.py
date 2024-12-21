@@ -10,22 +10,6 @@ student_bp = Blueprint('students', __name__, url_prefix='/api/students')
 student_schema = StudentSchema()
 students_schema = StudentSchema(many=True)
 
-def format_student(student):
-    return {
-        'id': student.id,
-        'studentId': student.student_id,
-        'firstName': student.first_name,
-        'lastName': student.last_name,
-        'email': student.email,
-        'dateOfBirth': student.date_of_birth.isoformat() if student.date_of_birth else None,
-        'enrollmentDate': student.enrollment_date.isoformat() if student.enrollment_date else None,
-        'program': student.program,
-        'status': student.status,
-        'contactNumber': student.contact_number,
-        'createdAt': student.created_at.isoformat() if student.created_at else None,
-        'updatedAt': student.updated_at.isoformat() if student.updated_at else None
-    }
-
 @student_bp.route('/', methods=['POST'])
 def create_student():
     try:
@@ -33,7 +17,7 @@ def create_student():
         student = Student(**student_schema.load(data))
         db.session.add(student)
         db.session.commit()
-        return jsonify(format_student(student)), 201
+        return jsonify(student_schema.dump(student)), 201
     except IntegrityError:
         db.session.rollback()
         return jsonify({'message': 'Student ID or email already exists'}), 400
@@ -44,12 +28,12 @@ def create_student():
 @student_bp.route('/', methods=['GET'])
 def get_students():
     students = Student.query.all()
-    return jsonify([format_student(student) for student in students])
+    return jsonify(students_schema.dump(students))
 
 @student_bp.route('/<int:id>', methods=['GET'])
 def get_student(id):
     student = Student.query.get_or_404(id)
-    return jsonify(format_student(student))
+    return jsonify(student_schema.dump(student))
 
 @student_bp.route('/<int:id>', methods=['PUT'])
 def update_student(id):
@@ -60,7 +44,7 @@ def update_student(id):
             setattr(student, key, value)
         student.updated_at = datetime.utcnow()
         db.session.commit()
-        return jsonify(format_student(student))
+        return jsonify(student_schema.dump(student))
     except IntegrityError:
         db.session.rollback()
         return jsonify({'message': 'Student ID or email already exists'}), 400
@@ -89,4 +73,4 @@ def search_students():
         query['status'] = request.args['status']
     
     students = Student.query.filter_by(**query).all()
-    return jsonify([format_student(student) for student in students])
+    return jsonify(students_schema.dump(students))
