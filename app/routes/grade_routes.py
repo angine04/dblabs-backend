@@ -109,9 +109,9 @@ def create_grade():
     new_grade = Grade(
         student_id=data['student_id'],
         course_id=data['course_id'],
-        score=data['score'],
+        score=data.get('score'),
         comments=data.get('comments'),
-        submission_date=datetime.utcnow()
+        submission_date=datetime.utcnow() if data.get('score') is not None else None
     )
 
     db.session.add(new_grade)
@@ -123,6 +123,13 @@ def create_grade():
         'course_id': new_grade.course_id,
         'score': new_grade.score,
         'semester': new_grade.course.semester if new_grade.course else None,
-        'submission_date': new_grade.submission_date.isoformat(),
+        'submission_date': new_grade.submission_date.isoformat() if new_grade.submission_date else None,
         'comments': new_grade.comments
     }), 201
+
+@grades_bp.route('/<int:id>', methods=['DELETE'])
+def delete_grade(id):
+    grade = Grade.query.get_or_404(id)
+    db.session.delete(grade)
+    db.session.commit()
+    return '', 204

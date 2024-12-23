@@ -4,23 +4,42 @@ from app.models.student import Student
 from app.schemas.student import StudentSchema
 from datetime import datetime
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 
 # Create the blueprint
 student_bp = Blueprint('students', __name__, url_prefix='/api/students')
 student_schema = StudentSchema()
 students_schema = StudentSchema(many=True)
 
+def reset_sequence():
+    """Reset the students table sequence to the max id"""
+    with db.engine.connect() as conn:
+        # Get the current maximum ID
+        result = conn.execute(text("SELECT MAX(id) FROM students"))
+        max_id = result.scalar() or 0
+        
+        # Set the sequence to the next value after max_id
+        conn.execute(text(f"ALTER SEQUENCE students_id_seq RESTART WITH {max_id + 1}"))
+        conn.commit()
+
 @student_bp.route('/', methods=['POST'])
 def create_student():
     try:
+        # Reset sequence before creating new student
+        reset_sequence()
+        
         data = request.get_json()
         student = Student(**student_schema.load(data))
         db.session.add(student)
         db.session.commit()
         return jsonify(student_schema.dump(student)), 201
-    except IntegrityError:
+    except IntegrityError as e:
         db.session.rollback()
-        return jsonify({'message': 'Student ID or email already exists'}), 400
+        if 'students_student_id_key' in str(e):
+            return jsonify({'message': 'Student ID already exists'}), 400
+        elif 'students_email_key' in str(e):
+            return jsonify({'message': 'Email already exists'}), 400
+        return jsonify({'message': 'Database integrity error'}), 400
     except Exception as e:
         db.session.rollback()
         return jsonify({'message': str(e)}), 400
